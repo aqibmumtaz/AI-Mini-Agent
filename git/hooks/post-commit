@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "post-commit hook triggered" >> Model-End/scripts/git/hooks/post_commit_logs.log
+
+# Activate conda base environment before running commit.py
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate base
+
+python "/Users/AqibMumtaz/Aqib Mumtaz/BitLogix/BitLogix-ASR/Model-End/scripts/commit.py" >> Model-End/scripts/git/hooks/post_commit_logs.log 2>&1
