@@ -443,7 +443,6 @@ def call_mcp_server(user_input, history):
         elif intent == "show_hours":
             # Use the selected_date from state or default to today
             try:
-                # Try to get selected_date from params or state
                 selected_date = params.get("selected_date") if params else None
                 if not selected_date:
                     selected_date = today
@@ -509,9 +508,6 @@ with gr.Blocks() as demo:
 
     def refresh_hours_label(selected_date):
         try:
-            # If selected_date is a tuple, extract the first element
-            if isinstance(selected_date, tuple):
-                selected_date = selected_date[0]
             resp = requests.get(
                 f"{MCP_SERVER_URL}/hours", params={"date": get_iso_date(selected_date)}
             )
@@ -542,7 +538,7 @@ with gr.Blocks() as demo:
                 new_date_obj = datetime.now()
         else:
             new_date_obj = new_date
-        return new_date_obj, get_human_date(new_date_obj.date())
+        return new_date_obj
 
     def move_date(date_obj, delta_days):
         # Accepts a datetime, returns new datetime and state (for Gradio output)
@@ -552,6 +548,7 @@ with gr.Blocks() as demo:
             except Exception:
                 date_obj = datetime.now()
         new_date = date_obj + timedelta(days=delta_days)
+        # Return for both date_picker and date_state
         return new_date, new_date
 
     date_picker.change(
