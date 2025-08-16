@@ -491,21 +491,6 @@ with gr.Blocks() as demo:
     today = datetime.now()
     date_state = gr.State(today)
 
-    with gr.Row():
-        prev_btn = gr.Button("←")
-        date_picker = gr.DateTime(
-            value=today,
-            label="Select Date",
-            show_label=False,
-            include_time=False,
-            type="datetime",
-            elem_id="date-picker-field",
-        )
-        next_btn = gr.Button("→")
-
-    # --- Add hours logged today at the top using a Label for minimal layout shift ---
-    # Move this above the button handlers so it can be referenced
-
     def refresh_hours_label(selected_date):
         try:
             resp = requests.get(
@@ -522,11 +507,75 @@ with gr.Blocks() as demo:
         except Exception:
             return "Hours: N/A"
 
-    hours_today_box = gr.Label(
-        value=refresh_hours_label,
-        inputs=[date_state],
-        every=5.0,
-        elem_id="hours-today-box",
+    # --- Main layout: left ticket list, right chat column ---
+    with gr.Row():
+        with gr.Column(scale=1, min_width=300):
+            # Only allow selection of actual tickets (not project/epic/main task headers)
+            ticket_list = gr.Radio(
+                choices=[],
+                label="Open Tickets (🏢 Project > 🏷️ Epic > 🗂️ Main Task > 🔖 Ticket)",
+                interactive=True,
+                elem_id="ticket-list",
+                show_label=True,
+            )
+            ticket_info_md = gr.Markdown(value="", visible=False)
+        with gr.Column(scale=3):
+            # --- Compact row above chat view ---
+            with gr.Row(equal_height=True):
+                with gr.Column(scale=2, min_width=160):
+                    hours_today_box = gr.Label(
+                        value=refresh_hours_label,
+                        inputs=[date_state],
+                        every=5.0,
+                        elem_id="hours-today-box",
+                        container=True,
+                    )
+                with gr.Column(scale=1, min_width=120):
+                    date_picker = gr.DateTime(
+                        value=today,
+                        label="Select Date",
+                        show_label=True,
+                        include_time=False,
+                        type="datetime",
+                        elem_id="date-picker-field",
+                        scale=2,
+                    )
+                    with gr.Row(equal_height=True):
+                        prev_btn = gr.Button("←", scale=1, size="sm")
+                        next_btn = gr.Button("→", scale=1, size="sm")
+            # --- Chatbot and controls below ---
+            chatbot = gr.Chatbot()
+            state = gr.State([])
+            selected_ticket_state = gr.State(None)
+            confirm_undo_state = gr.State(False)
+            confirm_undo_all_state = gr.State(False)
+            with gr.Row():
+                hours_box = gr.Textbox(label="Hours (e.g. 1h 30m)", max_lines=1)
+                comment_box = gr.Textbox(label="Comment", max_lines=1)
+                log_btn = gr.Button("Log Hours", elem_id="log-hours-btn")
+                with gr.Row():
+                    undo_btn = gr.Button("Undo Last Hour", elem_id="undo-last-hour-btn")
+                    undo_all_btn = gr.Button(
+                        "Undo All Hours", elem_id="undo-all-hours-btn"
+                    )
+                list_logs_btn = gr.Button("List Logs", elem_id="list-logs-btn")
+            txt = gr.Textbox(
+                show_label=False, placeholder="Type your command and press Enter"
+            )
+
+    # Add custom CSS for vertical centering of the hours label
+    demo.css = (
+        (getattr(demo, "css", "") or "")
+        + """
+        #hours-today-box {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 100% !important;
+            min-height: 48px;
+            font-size: 1.1em;
+        }
+        """
     )
 
     def set_date(new_date):
@@ -555,7 +604,12 @@ with gr.Blocks() as demo:
         set_date,
         [date_picker],
         [date_state],
+    ).then(
+        refresh_hours_label,
+        [date_state],
+        [hours_today_box],
     )
+
     prev_btn.click(
         move_date,
         [date_picker, gr.State(-1)],
@@ -600,50 +654,6 @@ with gr.Blocks() as demo:
             return "\n\n".join(lines)
         except Exception as e:
             return f"Error fetching logs: {str(e)}"
-
-    # --- Move ticket selection to a vertical list on the top left, rest of UI to the right ---
-    with gr.Row():
-        with gr.Column(scale=1, min_width=300):  # increased min_width for more space
-            # Only allow selection of actual tickets (not project/epic/main task headers)
-            ticket_list = gr.Radio(
-                choices=[],
-                label="Open Tickets (🏢 Project > 🏷️ Epic > 🗂️ Main Task > 🔖 Ticket)",  # This will be dynamically updated
-                interactive=True,
-                elem_id="ticket-list",
-                show_label=True,
-            )
-            ticket_info_md = gr.Markdown(value="", visible=False)
-        with gr.Column(scale=3):
-            # Everything else goes here, so ticket list is always visible from top
-
-            # # Always refresh on first UI load, every 10 seconds, and on page refresh
-            # demo.load(
-            #     refresh_hours_label,
-            #     inputs=[date_state],
-            #     outputs=hours_today_box,
-            #     queue=False,
-            #     every=5.0,  # Pass as float (seconds), not Timer object
-            # )
-            # hours_today_box now refreshes itself every 5 seconds using the new gr.Label API
-
-            chatbot = gr.Chatbot()
-            state = gr.State([])
-            selected_ticket_state = gr.State(None)
-            confirm_undo_state = gr.State(False)
-            confirm_undo_all_state = gr.State(False)
-            with gr.Row():
-                hours_box = gr.Textbox(label="Hours (e.g. 1h 30m)", max_lines=1)
-                comment_box = gr.Textbox(label="Comment", max_lines=1)
-                log_btn = gr.Button("Log Hours", elem_id="log-hours-btn")
-                with gr.Row():
-                    undo_btn = gr.Button("Undo Last Hour", elem_id="undo-last-hour-btn")
-                    undo_all_btn = gr.Button(
-                        "Undo All Hours", elem_id="undo-all-hours-btn"
-                    )
-                list_logs_btn = gr.Button("List Logs", elem_id="list-logs-btn")
-            txt = gr.Textbox(
-                show_label=False, placeholder="Type your command and press Enter"
-            )
 
     # --- ADD: CSS for scrollable open ticket list with max height ---
     demo.css = (
@@ -1153,6 +1163,47 @@ with gr.Blocks() as demo:
                 scrollChatToBottom();
             }
         });
+
+        // --- Keyboard navigation for left/right arrow keys ---
+        // Attach only once, and attach immediately for robustness
+        if (!window.__gradio_arrow_listener_attached) {
+            window.__gradio_arrow_listener_attached = true;
+            function findArrowButton(direction) {
+                // Try by text content
+                let btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === direction);
+                if (btn) return btn;
+                // Try by aria-label
+                btn = Array.from(document.querySelectorAll('button[aria-label]')).find(b => b.getAttribute('aria-label').trim() === direction);
+                if (btn) return btn;
+                // Try by data-testid
+                btn = Array.from(document.querySelectorAll('button[data-testid]')).find(b => b.getAttribute('data-testid').toLowerCase().includes(direction === '←' ? 'prev' : 'next'));
+                if (btn) return btn;
+                // Try by id
+                btn = document.getElementById(direction === '←' ? 'prev_btn' : 'next_btn');
+                if (btn) return btn;
+                return null;
+            }
+            document.addEventListener('keydown', function(e) {
+                // Ignore if focus is in a text input, textarea, or contenteditable
+                const active = document.activeElement;
+                if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+                    return;
+                }
+                if (e.key === 'ArrowLeft') {
+                    let btn = findArrowButton('←');
+                    if (btn) {
+                        btn.click();
+                        e.preventDefault();
+                    }
+                } else if (e.key === 'ArrowRight') {
+                    let btn = findArrowButton('→');
+                    if (btn) {
+                        btn.click();
+                        e.preventDefault();
+                    }
+                }
+            }, true);
+        }
         </script>
         """
     )
@@ -1272,6 +1323,62 @@ def format_close_command_response(response):
 
 if __name__ == "__main__":
     import sys
+
+    # --- Inject keyboard navigation script at the end of the Blocks ---
+    with demo:
+        gr.HTML(
+            """
+            <script>
+            // --- Keyboard navigation for left/right arrow keys ---
+            if (!window.__gradio_arrow_listener_attached) {
+                window.__gradio_arrow_listener_attached = true;
+                function findArrowButton(direction) {
+                    // Try by text content
+                    let btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === direction);
+                    if (btn) return btn;
+                    // Try by aria-label
+                    btn = Array.from(document.querySelectorAll('button[aria-label]')).find(b => b.getAttribute('aria-label').trim() === direction);
+                    if (btn) return btn;
+                    // Try by data-testid
+                    btn = Array.from(document.querySelectorAll('button[data-testid]')).find(b => b.getAttribute('data-testid').toLowerCase().includes(direction === '←' ? 'prev' : 'next'));
+                    if (btn) return btn;
+                    // Try by id
+                    btn = document.getElementById(direction === '←' ? 'prev_btn' : 'next_btn');
+                    if (btn) return btn;
+                    return null;
+                }
+                document.addEventListener('keydown', function(e) {
+                    // Ignore if focus is in a text input, textarea, or contenteditable
+                    const active = document.activeElement;
+                    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+                        return;
+                    }
+                    if (e.key === 'ArrowLeft') {
+                        console.log('[Gradio] ArrowLeft key detected');
+                        let btn = findArrowButton('←');
+                        if (btn) {
+                            console.log('[Gradio] Clicking left (←) button');
+                            btn.click();
+                            e.preventDefault();
+                        } else {
+                            console.log('[Gradio] Left (←) button not found');
+                        }
+                    } else if (e.key === 'ArrowRight') {
+                        console.log('[Gradio] ArrowRight key detected');
+                        let btn = findArrowButton('→');
+                        if (btn) {
+                            console.log('[Gradio] Clicking right (→) button');
+                            btn.click();
+                            e.preventDefault();
+                        } else {
+                            console.log('[Gradio] Right (→) button not found');
+                        }
+                    }
+                }, true);
+            }
+            </script>
+            """
+        )
 
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         test_extract_command_ai()
