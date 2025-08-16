@@ -104,7 +104,7 @@ from datetime import datetime, timedelta
 
 # === CONFIGURATION SECTION ===
 
-JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "https://bitlogix.atlassian.net/")
+JIRA_BASE_URL = Configs.JIRA_BASE_URL
 JIRA_USER = Configs.JIRA_USER
 JIRA_API_TOKEN = Configs.JIRA_API_TOKEN
 START_TIME_FILE = os.environ.get("START_TIME_FILE", "./.worklog_start_time")

@@ -12,12 +12,14 @@ class Configs:
     OPENAI_API_KEY = None
     JIRA_USER = None
     JIRA_API_TOKEN = None
+    JIRA_BASE_URL = None
 
     _TYPES = {
         "TITLE": str,
         "OPENAI_API_KEY": str,
         "JIRA_USER": str,
         "JIRA_API_TOKEN": str,
+        "JIRA_BASE_URL": str,
         # "MAX_CALLS": int,
         # "THRESHOLD": float,
         # "DEBUG_MODE": bool,

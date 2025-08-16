@@ -1,3 +1,6 @@
+
 flask
 gradio
 requests
+openai
+python-dotenv
