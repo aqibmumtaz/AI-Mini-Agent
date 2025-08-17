@@ -1,7 +1,10 @@
+
+# --- IMPORTS ---
 import os
 from dotenv import load_dotenv
 
 
+ # --- CONFIGS CLASS ---
 class Configs:
     """
     Configs class loads .env variables and provides class-level access.
@@ -10,9 +13,12 @@ class Configs:
 
     TITLE = None
     OPENAI_API_KEY = None
+
     JIRA_USER = None
     JIRA_API_TOKEN = None
     JIRA_BASE_URL = None
+    TEMPO_API_TOKEN = None
+    TEMPO_USER_KEY = None
 
     _TYPES = {
         "TITLE": str,
@@ -20,6 +26,9 @@ class Configs:
         "JIRA_USER": str,
         "JIRA_API_TOKEN": str,
         "JIRA_BASE_URL": str,
+        "TEMPO_API_TOKEN": str,
+        "TEMPO_USER_KEY": str,
+        "WORKLOG_API_SOURCE": str,  # "jira" or "tempo"
         # "MAX_CALLS": int,
         # "THRESHOLD": float,
         # "DEBUG_MODE": bool,

@@ -1,6 +1,8 @@
-
+streamlit-js-eval
+streamlit-keyup
 flask
 gradio
+streamlit
 requests
 openai
 python-dotenv

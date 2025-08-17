@@ -12,7 +12,7 @@ def format_close_response(response):
     return str(response)
 
 
-# --- All imports moved to the top for clarity and best practices ---
+# --- IMPORTS ---
 
 import gradio as gr
 import requests
@@ -48,6 +48,7 @@ MCP_SERVER_URL = "http://localhost:5000"
 openai.api_key = Configs.OPENAI_API_KEY
 
 
+# --- OPENAI INTENT EXTRACTION ---
 def extract_command_ai(user_input):
     """
     Use OpenAI to extract intent and parameters from user input.
@@ -142,6 +143,7 @@ Output:
     return params
 
 
+# --- OPEN TICKETS LOGIC ---
 def get_open_tickets():
     try:
         resp = requests.get(f"{MCP_SERVER_URL}/tickets")
@@ -197,6 +199,7 @@ def get_open_tickets():
     return {}, [], 0
 
 
+# --- HOURS NORMALIZATION ---
 def normalize_hours(hours):
     """
     Normalize hours string to JIRA format: e.g. '2 hr', '2hr', '2 hours', '2 h' -> '2h'
@@ -225,6 +228,7 @@ def normalize_hours(hours):
     return s
 
 
+# --- MAIN MCP SERVER CALL LOGIC ---
 def call_mcp_server(user_input, history):
     user_input = user_input.strip()
     response = ""
@@ -491,12 +495,23 @@ with gr.Blocks() as demo:
     today = datetime.now()
     date_state = gr.State(today)
 
+    # --- HOURS LABEL REFRESH (UI) ---
     def refresh_hours_label(selected_date):
+        api_source = Configs.WORKLOG_API_SOURCE
         try:
-            resp = requests.get(
-                f"{MCP_SERVER_URL}/hours", params={"date": get_iso_date(selected_date)}
-            )
-            hours = resp.json().get("hours", 0.0)
+            if api_source == "tempo":
+                user_key = Configs.TEMPO_USER_KEY
+                resp = requests.get(
+                    f"{MCP_SERVER_URL}/tempo_hours",
+                    params={"date": get_iso_date(selected_date), "user": user_key},
+                )
+                hours = resp.json().get("hours", 0.0)
+            else:
+                resp = requests.get(
+                    f"{MCP_SERVER_URL}/hours",
+                    params={"date": get_iso_date(selected_date)},
+                )
+                hours = resp.json().get("hours", 0.0)
             # Format the date for display
             if hasattr(selected_date, "date"):
                 date_obj = selected_date.date()
@@ -628,30 +643,53 @@ with gr.Blocks() as demo:
         [date_state],
         [hours_today_box],
     )
-    # --- Add hours logged today at the top using a Label for minimal layout shift ---
 
+    # --- FETCH WORKLOGS (UI) ---
     def fetch_worklogs(selected_date):
+        """
+        Fetch worklogs for the selected date using the configured API source (JIRA or Tempo).
+        """
+        api_source = Configs.WORKLOG_API_SOURCE
         try:
-            resp = requests.get(
-                f"{MCP_SERVER_URL}/worklogs",
-                params={"date": get_iso_date(selected_date)},
-            )
-            logs = resp.json().get("worklogs", [])
-            if not logs:
-                return "No logs for this date."
-            lines = []
-            for log in logs:
-                started_raw = log.get("started", "")
-                try:
-                    dt = datetime.strptime(started_raw[:19], "%Y-%m-%dT%H:%M:%S")
-                    started_fmt = dt.strftime("%Y-%m-%d %H:%M")
-                except Exception:
-                    started_fmt = started_raw
-                lines.append(
-                    f"**{log['issue_key']} ({log['time_spent']})** *{log['summary']}*\n"
-                    f"{log['comment']}  {started_fmt}"
+            if api_source == "tempo":
+                user_key = Configs.TEMPO_USER_KEY
+                resp = requests.get(
+                    f"{MCP_SERVER_URL}/tempo_worklogs",
+                    params={"date": get_iso_date(selected_date), "user": user_key},
                 )
-            return "\n\n".join(lines)
+                logs = resp.json().get("worklogs", [])
+                if not logs:
+                    return "No logs for this date."
+                lines = []
+                for log in logs:
+                    started_raw = log.get("startDate", "")
+                    started_fmt = started_raw
+                    lines.append(
+                        f"**{log.get('issueKey', '')} ({log.get('timeSpentSeconds', 0)//3600}h {(log.get('timeSpentSeconds', 0)%3600)//60}m)** *{log.get('issueSummary', '')}*\n"
+                        f"{log.get('description', '')}  {started_fmt}"
+                    )
+                return "\n\n".join(lines)
+            else:
+                resp = requests.get(
+                    f"{MCP_SERVER_URL}/worklogs",
+                    params={"date": get_iso_date(selected_date)},
+                )
+                logs = resp.json().get("worklogs", [])
+                if not logs:
+                    return "No logs for this date."
+                lines = []
+                for log in logs:
+                    started_raw = log.get("started", "")
+                    try:
+                        dt = datetime.strptime(started_raw[:19], "%Y-%m-%dT%H:%M:%S")
+                        started_fmt = dt.strftime("%Y-%m-%d %H:%M")
+                    except Exception:
+                        started_fmt = started_raw
+                    lines.append(
+                        f"**{log['issue_key']} ({log['time_spent']})** *{log['summary']}*\n"
+                        f"{log['comment']}  {started_fmt}"
+                    )
+                return "\n\n".join(lines)
         except Exception as e:
             return f"Error fetching logs: {str(e)}"
 

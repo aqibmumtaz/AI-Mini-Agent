@@ -102,7 +102,62 @@ from configs import Configs
 from datetime import datetime, timedelta
 
 
-# === CONFIGURATION SECTION ===
+# --- CONFIGURATION SECTION ---
+
+
+# --- TEMPO API SECTION ---
+def get_tempo_user_key():
+    """Get the Tempo user key/accountId (or 'current' for the current user)."""
+    return Configs.TEMPO_USER_KEY or "current"
+
+
+def get_tempo_headers():
+    """Return headers for Tempo API requests."""
+    return {
+        "Authorization": f"Bearer {Configs.TEMPO_API_TOKEN}",
+        "Accept": "application/json",
+    }
+
+
+def get_tempo_worklogs(date_from, date_to=None, user_key=None):
+    """
+    Fetch worklogs for a user between date_from and date_to (YYYY-MM-DD).
+    If date_to is None, only date_from is used.
+    """
+    if not user_key:
+        user_key = get_tempo_user_key()
+    if not date_to:
+        date_to = date_from
+    url = f"{Configs.JIRA_BASE_URL}/rest/tempo-timesheets/4/worklogs"
+    params = {
+        "user": user_key,
+        "dateFrom": date_from,
+        "dateTo": date_to,
+        "limit": 1000,
+    }
+    resp = requests.get(url, headers=get_tempo_headers(), params=params)
+    if resp.status_code != 200:
+        print(f"Tempo API error: {resp.status_code} {resp.text}")
+    return resp.json()  # List of worklog dicts
+
+
+def get_tempo_hours_logged(date_str, user_key=None):
+    """
+    Returns total hours logged for the given date (YYYY-MM-DD) by the user (float, in hours).
+    """
+    logs = get_tempo_worklogs(date_str, date_str, user_key)
+    total_seconds = sum(wl.get("timeSpentSeconds", 0) for wl in logs)
+    return round(total_seconds / 3600, 2)
+
+
+def get_tempo_all_worklogs(date_str, user_key=None):
+    """
+    Returns all worklogs for the given date for the user.
+    """
+    return get_tempo_worklogs(date_str, date_str, user_key)
+
+
+# --- JIRA API SECTION ---
 
 JIRA_BASE_URL = Configs.JIRA_BASE_URL
 JIRA_USER = Configs.JIRA_USER
@@ -879,7 +934,7 @@ def get_hours_logged(date_str=None):
     else:
         date_query = datetime.now().strftime("%Y-%m-%d")
     url = f"{JIRA_BASE_URL}/rest/api/2/search"
-    jql = f"worklogAuthor = currentUser() AND worklogDate = {date_query}"
+    jql = f"worklogAuthor = currentUser() AND worklogDate >= {date_query} AND worklogDate <= {date_query}"
     params = {
         "jql": jql,
         "fields": "worklog",

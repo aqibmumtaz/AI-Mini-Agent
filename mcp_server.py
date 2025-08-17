@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify
+
 import sys
 import os
 
-# Import functions from commit.py
 sys.path.append(os.path.dirname(__file__))
 from commit import (
     set_start_time_manual,
@@ -18,9 +18,48 @@ from commit import (
     get_all_worklogs,
 )
 
+
+ # --- IMPORTS & SETUP ---
+# Import Tempo API helpers from commit.py (must be before endpoints)
+try:
+    from commit import get_tempo_hours_logged, get_tempo_all_worklogs
+except ImportError:
+    get_tempo_hours_logged = None
+    get_tempo_all_worklogs = None
+
+
+# --- FLASK APP INIT ---
 app = Flask(__name__)
 
 
+# --- TEMPO API ENDPOINTS ---
+@app.route("/tempo_hours", methods=["GET"])
+def api_tempo_hours():
+    if not get_tempo_hours_logged:
+        return jsonify({"error": "Tempo API not available"}), 500
+    date_str = request.args.get("date")
+    user_key = request.args.get("user")
+    try:
+        hours = get_tempo_hours_logged(date_str, user_key)
+        return jsonify({"hours": hours, "date": date_str, "user": user_key})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/tempo_worklogs", methods=["GET"])
+def api_tempo_worklogs():
+    if not get_tempo_all_worklogs:
+        return jsonify({"error": "Tempo API not available"}), 500
+    date_str = request.args.get("date")
+    user_key = request.args.get("user")
+    try:
+        logs = get_tempo_all_worklogs(date_str, user_key)
+        return jsonify({"worklogs": logs, "date": date_str, "user": user_key})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+ # --- JIRA API ENDPOINTS ---
 @app.route("/start", methods=["POST"])
 def api_start():
     hhmm = request.json.get("time")
@@ -119,6 +158,8 @@ def api_worklogs():
     return jsonify({"worklogs": logs, "date": date_str})
 
 
+
+# --- SERVER RUN LOGIC ---
 def run_server():
     app.run(host="0.0.0.0", port=5000)
 

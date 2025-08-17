@@ -1,3 +1,5 @@
+
+# --- IMPORTS ---
 import sys
 import threading
 import subprocess
@@ -5,6 +7,7 @@ import os
 import signal
 
 
+ # --- PORT KILLER ---
 def kill_process_on_port(port):
     """Kill process running on the given port (cross-platform)."""
     try:
@@ -39,12 +42,14 @@ def kill_process_on_port(port):
         pass
 
 
+ # --- GRADIO RUNNER ---
 def run_gradio():
     from gradio_chatbot import demo
 
     demo.launch(server_name="0.0.0.0", server_port=7860, share=False, inbrowser=False)
 
 
+ # --- MCP SERVER RUNNER ---
 def run_mcp_server():
     from mcp_server import run_server
 

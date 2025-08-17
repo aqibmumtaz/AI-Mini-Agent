@@ -178,6 +178,22 @@ The toolkit is designed for teams using JIRA, enabling seamless worklog tracking
   bash generate_task_list.sh 2025-06-01
   ```
 
+---
+
+## Running the Streamlit Chatbot UI on a Specific Port
+
+To run the Streamlit UI (e.g., `streamlit_chatbot.py`) on a specific port (such as 8025), and ensure the port is free, use this one-liner:
+
+```bash
+lsof -ti:8025 | xargs kill -9; streamlit run streamlit_chatbot.py --server.port 8025
+```
+
+This command will:
+- Kill any process currently using port 8025
+- Start the Streamlit app on port 8025
+
+You can change `8025` to any port you prefer.
+
 ## Git Hook Setup
 
 To enable automatic JIRA worklog logging after each commit, set up a git post-commit hook:
