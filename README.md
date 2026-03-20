@@ -1,8 +1,8 @@
-# BitLogix-ASR JIRA Worklog MCP Server & CLI
+# JIRA Worklog MCP Server & CLI
 
 ## Project Description
 
-BitLogix-ASR JIRA Worklog MCP is a developer productivity toolkit for automating JIRA worklog entries, ticket management, and reporting.  
+JIRA Worklog MCP is a developer productivity toolkit for automating JIRA worklog entries, ticket management, and reporting.  
 It supports multiple workflows:  
 - **CLI/manual logging** for developers who prefer the terminal or git hooks  
 - **HTTP API server** for integration with other tools  
@@ -203,7 +203,7 @@ To enable automatic JIRA worklog logging after each commit, set up a git post-co
 
    ```
    #!/bin/bash
-   python "/Users/AqibMumtaz/Aqib Mumtaz/BitLogix/BitLogix-ASR/Model-End/scripts/commit.py"
+   python "/commit.py"
    ```
 
 3. Make the hook executable:
